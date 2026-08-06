@@ -1,0 +1,21 @@
+# Environments
+backend/venv/
+backend/env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+
+# Environment files
+**/.env
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+policy_data_store/
