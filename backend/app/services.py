@@ -6,9 +6,13 @@ class GitStorageService:
         self.repo_path = repo_path
         self.repo = Repo(self.repo_path)
 
-    def write_policy(self, tenant_id: str, filename: str, content: str) -> str:
+    def _get_paths(self, tenant_id: str, filename: str):
         tenant_folder_path = os.path.join(self.repo_path, tenant_id)
         full_file_path = os.path.join(tenant_folder_path, filename)
+        return tenant_folder_path, full_file_path
+
+    def write_policy(self, tenant_id: str, filename: str, content: str) -> str:
+        tenant_folder_path, full_file_path = self._get_paths(tenant_id, filename)
 
         os.makedirs(tenant_folder_path, exist_ok=True)
         with open(full_file_path, "w") as f:
