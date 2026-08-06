@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
-from .services import GitStorageService, validate_cedar_syntax
+from .services import GitStorageService
 from . import models
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="SmartVerify Policy Manager")
@@ -19,6 +20,12 @@ def get_authorized_tenants(user_id: str = Header(defaul=None)):
     return MOCK_USER_DB[user_id]
 
 # --- API Routes ---
+
+# Health check route to verify the server is running
+@app.get("/")
+def health_check():
+    return {"status": "API is online and database is connected"}
+
 @app.post("/api/policies")
 def upload_policy(
     tenant_id: str,

@@ -3,7 +3,7 @@ class GitStorageService:
         self.repo_path = repo_path
 
     def write_policy(self, tenant_id: str, filename: str, content: str) -> str:
-
+        
 
         pass
 
