@@ -16,7 +16,7 @@ from app import models
 from app.database import Base, get_db
 from app.main import app
 from app.routers.policies import get_git_service
-from app.services import GitStorageService
+from app.services import CedarValidationError, GitStorageService
 
 engine = create_engine(
     "sqlite://",
@@ -68,10 +68,16 @@ def client(db_session, git_service, monkeypatch):
     def override_get_db():
         yield db_session
 
+    def fake_cedar_validation(content):
+        if not content.startswith("permit("):
+            raise CedarValidationError(
+                "unexpected token at line 1, column 1"
+            )
+
     monkeypatch.setattr(
         GitStorageService,
         "validate_cedar_syntax",
-        staticmethod(lambda content: content.startswith("permit(")),
+        staticmethod(fake_cedar_validation),
     )
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_git_service] = lambda: git_service
