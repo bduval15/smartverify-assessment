@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Header, HTTPException, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+
+from .. import models
 from ..database import get_db
 from ..services import GitStorageService
-from .. import models
 
 router = APIRouter(prefix="/api/policies", tags=["Policies"])
 
@@ -12,141 +14,226 @@ MOCK_USER_DB = {
     "user_3": ["tenant_C"],
 }
 
-def get_authorized_tenants(user_id: str = Header(default=None)):
+
+def get_authorized_tenants(user_id: str | None = Header(default=None)) -> list[str]:
     if user_id is None or user_id not in MOCK_USER_DB:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     return MOCK_USER_DB[user_id]
 
-def verify_tenant_access(tenant_id: str, authorized_tenants: list = Depends(get_authorized_tenants)):
+
+def verify_tenant_access(
+    tenant_id: str,
+    authorized_tenants: list[str] = Depends(get_authorized_tenants),
+) -> str:
     if tenant_id not in authorized_tenants:
         raise HTTPException(status_code=403, detail="Forbidden")
     return tenant_id
 
-def validate_policy_content(content: str):
+
+def validate_policy_filename(filename: str) -> str:
+    try:
+        GitStorageService._validate_path_component(filename, "filename")
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return filename
+
+
+def validate_policy_content(content: str) -> str:
     if not GitStorageService.validate_cedar_syntax(content):
         raise HTTPException(status_code=400, detail="Invalid Cedar syntax")
     return content
 
-# --- API Routes ---
+
+def get_git_service() -> GitStorageService:
+    return GitStorageService()
+
 
 @router.post("")
 def upload_policy(
     tenant_id: str = Depends(verify_tenant_access),
-    filename: str = "",
+    filename: str = Depends(validate_policy_filename),
     content: str = Depends(validate_policy_content),
     db: Session = Depends(get_db),
+    git_service: GitStorageService = Depends(get_git_service),
 ):
-    git_service = GitStorageService()
-    try:
-        commit_hash = git_service.write_policy(tenant_id, 
-                                               filename, content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to write policy: {str(e)}")
+    existing_policy = (
+        db.query(models.PolicyMetadata)
+        .filter_by(tenant_id=tenant_id, filename=filename)
+        .first()
+    )
+    if existing_policy:
+        raise HTTPException(status_code=409, detail="Policy already exists")
 
     try:
-        policy = models.Policy(tenant_id=tenant_id, 
-                               filename=filename,
-                               git_hash=commit_hash)
+        commit_hash = git_service.write_policy(tenant_id, filename, content)
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to write policy: {error}"
+        ) from error
+
+    try:
+        policy = models.PolicyMetadata(
+            tenant_id=tenant_id,
+            filename=filename,
+            git_hash=commit_hash,
+        )
         db.add(policy)
         db.commit()
         db.refresh(policy)
-    except Exception as e:
+    except SQLAlchemyError as error:
         db.rollback()
-        git_service.delete_policy(tenant_id, filename)
-        raise HTTPException(status_code=500, detail=f"Failed to save policy metadata: {str(e)}")
+        try:
+            git_service.delete_policy(tenant_id, filename)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save policy metadata: {error}"
+        ) from error
 
     return {"message": "Policy uploaded successfully", "policy_id": policy.id}
+
 
 @router.delete("")
 def delete_policy(
     tenant_id: str = Depends(verify_tenant_access),
-    filename: str = "",
+    filename: str = Depends(validate_policy_filename),
     db: Session = Depends(get_db),
+    git_service: GitStorageService = Depends(get_git_service),
 ):
-    git_service = GitStorageService()
     try:
         git_service.delete_policy(tenant_id, filename)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Policy not found")
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail="Policy not found") from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to delete policy: {error}"
+        ) from error
 
-    policy = db.query(models.Policy).filter_by(tenant_id=tenant_id, filename=filename).first()
+    policy = (
+        db.query(models.PolicyMetadata)
+        .filter_by(tenant_id=tenant_id, filename=filename)
+        .first()
+    )
     if policy:
-        db.delete(policy)
-        db.commit()
+        try:
+            db.delete(policy)
+            db.commit()
+        except SQLAlchemyError as error:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Policy file deleted but metadata cleanup failed: {error}",
+            ) from error
 
     return {"message": "Policy deleted successfully"}
+
 
 @router.get("/list")
 def list_policies(
     tenant_id: str = Depends(verify_tenant_access),
     db: Session = Depends(get_db),
 ):
-    policies = db.query(models.Policy).filter(models.Policy.tenant_id == tenant_id).all()
+    policies = (
+        db.query(models.PolicyMetadata)
+        .filter(models.PolicyMetadata.tenant_id == tenant_id)
+        .all()
+    )
 
-    return {"policies": [{"id": p.id, "filename": p.filename} for p in policies]}
+    return {
+        "policies": [
+            {"id": policy.id, "filename": policy.filename} for policy in policies
+        ]
+    }
+
 
 @router.put("")
 def update_policy(
     tenant_id: str = Depends(verify_tenant_access),
-    filename: str = "",
+    filename: str = Depends(validate_policy_filename),
     content: str = Depends(validate_policy_content),
     db: Session = Depends(get_db),
+    git_service: GitStorageService = Depends(get_git_service),
 ):
-    git_service = GitStorageService()
     try:
         commit_hash = git_service.write_policy(tenant_id, filename, content)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update policy: {str(e)}")
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update policy: {error}"
+        ) from error
 
-    policy = db.query(models.Policy).filter_by(tenant_id=tenant_id, filename=filename).first()
-    if policy:
-        policy.git_hash = commit_hash
+    try:
+        policy = (
+            db.query(models.PolicyMetadata)
+            .filter_by(tenant_id=tenant_id, filename=filename)
+            .first()
+        )
+        if policy:
+            policy.git_hash = commit_hash
+        else:
+            policy = models.PolicyMetadata(
+                tenant_id=tenant_id,
+                filename=filename,
+                git_hash=commit_hash,
+            )
+            db.add(policy)
         db.commit()
         db.refresh(policy)
-    else:
-        policy = models.Policy(tenant_id=tenant_id, filename=filename, git_hash=commit_hash)
-        db.add(policy)
-        db.commit()
-        db.refresh(policy)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save policy metadata: {error}"
+        ) from error
 
     return {"message": "Policy updated successfully", "policy_id": policy.id}
+
 
 @router.get("/content")
 def get_policy_content(
     tenant_id: str = Depends(verify_tenant_access),
-    filename: str = "",
+    filename: str = Depends(validate_policy_filename),
     db: Session = Depends(get_db),
+    git_service: GitStorageService = Depends(get_git_service),
 ):
-    policy = db.query(models.Policy).filter_by(tenant_id=tenant_id, filename=filename).first()
+    policy = (
+        db.query(models.PolicyMetadata)
+        .filter_by(tenant_id=tenant_id, filename=filename)
+        .first()
+    )
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
 
-    git_service = GitStorageService()
-    _, full_file_path = git_service._get_paths(tenant_id, filename)
-
     try:
-        with open(full_file_path, "r") as f:
-            content = f.read()
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Policy file not found in Git storage")
+        content = git_service.read_policy(tenant_id, filename)
+    except FileNotFoundError as error:
+        raise HTTPException(
+            status_code=404, detail="Policy file not found in Git storage"
+        ) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read policy: {error}"
+        ) from error
 
-    return {"policy": {"id": policy.id, "filename": policy.filename, "content": content}}
+    return {
+        "policy": {
+            "id": policy.id,
+            "filename": policy.filename,
+            "content": content,
+        }
+    }
+
 
 @router.get("/history")
 def policy_history(
     tenant_id: str = Depends(verify_tenant_access),
-    filename: str = "",
-    db: Session = Depends(get_db),
+    filename: str = Depends(validate_policy_filename),
+    git_service: GitStorageService = Depends(get_git_service),
 ):
-
-    git_service = GitStorageService()
-    _, full_file_path = git_service._get_paths(tenant_id, filename)
-
     try:
-        commits = list(git_service.repo.iter_commits(paths=full_file_path))
-        history = [{"commit_hash": commit.hexsha, "message": commit.message.strip(), "date": commit.committed_datetime} for commit in commits]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve policy history: {str(e)}")
+        history = git_service.policy_history(tenant_id, filename)
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve policy history: {error}"
+        ) from error
 
-    return {"history": history} 
+    return {"history": history}

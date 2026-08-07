@@ -6,6 +6,9 @@ backend/env/
 __pycache__/
 *.py[cod]
 *$py.class
+.coverage
+coverage.xml
+htmlcov/
 
 # Node / React
 frontend/node_modules/
@@ -19,3 +22,7 @@ frontend/dist/
 Thumbs.db
 
 policy_data_store/
+backend/.pytest-tmp/
+backend/test-tmp/
+backend/manual-test-tmp/
+backend/tests/_workspaces/

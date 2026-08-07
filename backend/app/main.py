@@ -1,15 +1,16 @@
-from fastapi import FastAPI
-from .database import engine, Base, get_db
-from .routers import policies
-from . import models
+from fastapi import Depends, FastAPI
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-Base.metadata.create_all(bind=engine)
+from . import models
+from .database import get_db
+from .routers import policies
 
 app = FastAPI(title="SmartVerify Policy Manager")
 
 app.include_router(policies.router)
 
-# Health check route to verify the server is running
 @app.get("/")
-def health_check():
+def health_check(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
     return {"status": "API is online and database is connected"}

@@ -7,8 +7,15 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
 
+def get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable is required")
+    return database_url
+
+
+DATABASE_URL = get_database_url()
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(
@@ -20,12 +27,6 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-if __name__ == "__main__":
-    try:
-        with engine.connect() as connection:
-            print("Connected to your PostgreSQL database via Supabase.")
-    except Exception as e:
-        print(f"Connection failed!\nError: {e}")
 
 def get_db():
     db = SessionLocal()

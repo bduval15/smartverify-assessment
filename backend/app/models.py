@@ -7,7 +7,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
-from app.database import Base
+from .database import Base
 
 class PolicyMetadata(Base):
     __tablename__ = "policy_metadata"
