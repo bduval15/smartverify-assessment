@@ -32,10 +32,7 @@ Update `backend/.env` with the supplied Supabase PostgreSQL connection URL.
 The configured database already contains the `policy_metadata` table, so no
 database initialization or migration command is required.
 
-The connection URL is a secret and is intentionally excluded from Git. It must
-be provided securely with the submission rather than added to this README.
-
-The existing table is expected to match this metadata-only model:
+The existing table matches this metadata-only model:
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -139,8 +136,7 @@ commit to restore the previous content.
 
 ## API and demo examples
 
-The UI is the simplest way to demonstrate the full workflow. The following
-commands prove that the same controls are enforced when the UI is bypassed.
+The following commands prove that the same controls are enforced when the UI is bypassed.
 Run them from the project root while the backend is running.
 
 Upload a Cedar file as multipart form data:
@@ -192,7 +188,7 @@ curl.exe -i `
 
 Expected result: HTTP `403 Forbidden`, even though the request bypasses the UI.
 
-Prove that content is stored in a real Git repository after the upload:
+To prove that content is stored in a real Git repository after the upload:
 
 ```powershell
 git -C policy_data_store rev-parse --is-inside-work-tree

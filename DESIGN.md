@@ -2,7 +2,7 @@
 
 ## 1. Executive summary
 
-SmartVerify Policy Manager is a deliberately small service for managing
+SmartVerify Policy Manager is a small service for managing
 tenant-scoped Cedar policy files. The implementation uses:
 
 - React for the browser interface.
@@ -45,9 +45,6 @@ message queue, or container platform.
 - Database migration orchestration for arbitrary new databases.
 - High-volume pagination, search, or background processing.
 
-These non-goals are intentional. They prevent infrastructure work from
-obscuring the behavior the assessment is asking to evaluate.
-
 ## 3. Architecture
 
 ```mermaid
@@ -89,10 +86,6 @@ The implementation is organized around these invariants:
 6. **Unique tenant filename:** `(tenant_id, filename)` uniquely identifies a
    current policy in the metadata index.
 
-These rules are more important than individual class or route names. They make
-the design easy to reason about and provide direct answers to the assessment's
-storage and isolation requirements.
-
 ## 5. Backend components
 
 ### `app/auth.py`
@@ -110,9 +103,8 @@ This module is the single source of truth for seeded demo access:
 public `GET /api/users` endpoint exposes these deliberately non-secret demo
 mappings so the UI does not maintain a second, potentially inconsistent copy.
 
-This is appropriate for the requested minimal authentication model. It is not
-presented as production authentication: a real deployment would replace this
-module with verified identity claims while keeping the tenant dependency used
+This is the requested minimal authentication model. A real deployment would replace this
+module with verified identity claims (with JWT) while keeping the tenant dependency used
 by the policy routes.
 
 ### `app/routers/policies.py`
@@ -125,10 +117,6 @@ This module owns the HTTP policy workflow. It performs:
 - PostgreSQL metadata queries.
 - Coordination with `GitStorageService`.
 - Translation of domain/storage failures into HTTP responses.
-
-Keeping the workflow in one router makes the sequence of authorization,
-validation, Git, and database operations visible during review. Git mechanics
-and Cedar process execution remain isolated in the service layer.
 
 ### `app/services.py`
 
@@ -191,10 +179,9 @@ history without adding a second version table.
 
 ### Why one repository
 
-The requirement explicitly calls for a single repository. Tenant directories
-provide a simple deterministic layout while authorization remains enforced in
-the application. One repository also makes history and backup operations easy
-to demonstrate.
+Tenant directories provide a simple deterministic layout while authorization 
+remains enforced in the application. One repository also makes history and 
+backup operations easy to demonstrate.
 
 Separate repositories per tenant would provide a stronger physical boundary,
 but would violate the requested storage model and add repository lifecycle and
@@ -338,7 +325,7 @@ Compensation is best-effort. A process crash between steps or a simultaneous
 failure of both PostgreSQL and Git can still require reconciliation. Production
 hardening could add operation records, repository locking, startup
 reconciliation, retry jobs, and monitoring. Those mechanisms were not added
-because they would dominate the assessment implementation.
+because they would over complicate the assessment implementation.
 
 ## 10. Tenant isolation and security boundaries
 
@@ -592,9 +579,9 @@ not a production control plane. Important extensions would include:
 10. **Deployment automation:** migrations, containers, CI, secret management,
     and backup/restore procedures.
 
-These are intentionally listed rather than partially implemented. The current
-submission remains small enough to explain and modify while showing where a
-production design would evolve.
+These are intentionally listed rather than partially implemented. Continued development
+of this application would benefit greatly from these features for security purposes and 
+improvement of the CI/CD pipeline. 
 
 ## 18. Requirement traceability
 
