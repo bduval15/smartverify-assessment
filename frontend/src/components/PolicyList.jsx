@@ -1,3 +1,4 @@
+/** Render tenant policy metadata and the available file actions. */
 export default function PolicyList({
   tenantId,
   policies,

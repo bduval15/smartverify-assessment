@@ -20,7 +20,11 @@ class CedarValidatorUnavailableError(RuntimeError):
 
 
 class GitStorageService:
+    """Store tenant policy content and version history in one Git repository."""
+
     def __init__(self, repo_path: str | Path | None = None):
+        """Open the configured repository, initializing it when necessary."""
+
         configured_path = repo_path or os.getenv("POLICY_REPOSITORY_PATH")
         self.repo_path = Path(configured_path or DEFAULT_REPOSITORY_PATH).resolve()
         self.repo_path.mkdir(parents=True, exist_ok=True)
@@ -44,6 +48,8 @@ class GitStorageService:
 
     @staticmethod
     def _validate_path_component(value: str, field_name: str) -> None:
+        """Reject path components that could escape the tenant directory."""
+
         # Tenant authorization is the primary boundary; rejecting path syntax
         # adds defense in depth against traversal outside the repository.
         if (
@@ -57,6 +63,8 @@ class GitStorageService:
             raise ValueError(f"Invalid {field_name}")
 
     def _get_paths(self, tenant_id: str, filename: str) -> tuple[Path, Path]:
+        """Build validated tenant-directory and policy-file paths."""
+
         self._validate_path_component(tenant_id, "tenant ID")
         self._validate_path_component(filename, "filename")
 
@@ -65,9 +73,13 @@ class GitStorageService:
         return tenant_folder_path, full_file_path
 
     def _git_relative_path(self, tenant_id: str, filename: str) -> str:
+        """Return a platform-independent repository path for Git operations."""
+
         return (Path(tenant_id) / filename).as_posix()
 
     def write_policy(self, tenant_id: str, filename: str, content: str) -> str:
+        """Write and commit policy content, returning the new commit hash."""
+
         tenant_folder_path, full_file_path = self._get_paths(tenant_id, filename)
 
         tenant_folder_path.mkdir(parents=True, exist_ok=True)
@@ -89,6 +101,8 @@ class GitStorageService:
         filename: str,
         commit_hash: str | None = None,
     ) -> str:
+        """Read current content or the exact blob stored at a supplied commit."""
+
         _, full_file_path = self._get_paths(tenant_id, filename)
         if commit_hash is None:
             return full_file_path.read_text(encoding="utf-8")
@@ -106,6 +120,8 @@ class GitStorageService:
             ) from error
 
     def delete_policy(self, tenant_id: str, filename: str) -> str:
+        """Delete and commit a policy, returning the deletion commit hash."""
+
         _, full_file_path = self._get_paths(tenant_id, filename)
 
         if not full_file_path.is_file():
@@ -124,6 +140,8 @@ class GitStorageService:
         return commit.hexsha
 
     def policy_history(self, tenant_id: str, filename: str) -> list[dict]:
+        """Return commits that changed one tenant-relative policy path."""
+
         self._get_paths(tenant_id, filename)
         relative_path = self._git_relative_path(tenant_id, filename)
         commits = self.repo.iter_commits(paths=relative_path)
@@ -138,6 +156,8 @@ class GitStorageService:
 
     @staticmethod
     def validate_cedar_syntax(file_content: str) -> None:
+        """Parse uploaded text with Cedar or raise a validation/service error."""
+
         cedar_executable = os.getenv("CEDAR_EXECUTABLE") or shutil.which("cedar")
         if not cedar_executable:
             raise CedarValidatorUnavailableError(

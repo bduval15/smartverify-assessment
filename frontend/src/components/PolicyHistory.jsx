@@ -1,3 +1,4 @@
+/** Render Git commits associated with the selected policy path. */
 export default function PolicyHistory({ history, onClose }) {
   if (!history) {
     return null

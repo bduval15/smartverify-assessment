@@ -10,6 +10,8 @@ from sqlalchemy.sql import func
 from .database import Base
 
 class PolicyMetadata(Base):
+    """Index one tenant policy and the Git commit containing its content."""
+
     __tablename__ = "policy_metadata"
 
     # Cedar content is intentionally absent: Git owns content while this table

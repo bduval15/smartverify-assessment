@@ -22,6 +22,8 @@ def verify_tenant_access(
     tenant_id: str,
     authorized_tenants: list[str] = Depends(get_authorized_tenants),
 ) -> str:
+    """Authorize the requested tenant against the authenticated user's scope."""
+
     # This dependency runs for every policy route, so handcrafted requests get
     # the same tenant isolation as requests made through the UI.
     if tenant_id not in authorized_tenants:
@@ -30,6 +32,8 @@ def verify_tenant_access(
 
 
 def validate_policy_filename(filename: str) -> str:
+    """Validate an uploaded or requested filename as one safe path component."""
+
     try:
         GitStorageService._validate_path_component(filename, "filename")
     except ValueError as error:
@@ -38,6 +42,8 @@ def validate_policy_filename(filename: str) -> str:
 
 
 def validate_policy_content(content: str, git_service: GitStorageService) -> str:
+    """Require valid Cedar syntax and translate parser failures to HTTP errors."""
+
     try:
         git_service.validate_cedar_syntax(content)
     except CedarValidationError as error:
@@ -60,6 +66,8 @@ def validate_policy_content(content: str, git_service: GitStorageService) -> str
 
 
 def get_git_service() -> GitStorageService:
+    """Provide the configured Git storage service to FastAPI routes."""
+
     return GitStorageService()
 
 
@@ -67,6 +75,8 @@ def read_policy_upload(
     policy_file: UploadFile,
     git_service: GitStorageService,
 ) -> tuple[str, str]:
+    """Read, size-check, decode, and Cedar-validate a multipart upload."""
+
     filename = validate_policy_filename(policy_file.filename or "")
     raw_content = policy_file.file.read(MAX_POLICY_SIZE_BYTES + 1)
     if len(raw_content) > MAX_POLICY_SIZE_BYTES:
@@ -93,6 +103,8 @@ def upload_policy(
     db: Session = Depends(get_db),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Commit a new policy and insert its tenant-scoped metadata record."""
+
     filename, content = read_policy_upload(policy_file, git_service)
     existing_policy = (
         db.query(models.PolicyMetadata)
@@ -142,6 +154,8 @@ def delete_policy(
     db: Session = Depends(get_db),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Delete an indexed policy with best-effort cross-store compensation."""
+
     policy = (
         db.query(models.PolicyMetadata)
         .filter_by(tenant_id=tenant_id, filename=filename)
@@ -197,6 +211,8 @@ def list_policies(
     tenant_id: str = Depends(verify_tenant_access),
     db: Session = Depends(get_db),
 ):
+    """List policy metadata filtered to one authorized tenant."""
+
     # PostgreSQL is the query index; listing should not infer current policies
     # by walking Git paths.
     policies = (
@@ -219,6 +235,8 @@ def update_policy(
     db: Session = Depends(get_db),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Replace an existing policy and advance its metadata commit hash."""
+
     filename, content = read_policy_upload(policy_file, git_service)
     policy = (
         db.query(models.PolicyMetadata)
@@ -275,6 +293,8 @@ def get_policy_content(
     db: Session = Depends(get_db),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Return JSON content from the policy's indexed Git commit."""
+
     policy = (
         db.query(models.PolicyMetadata)
         .filter_by(tenant_id=tenant_id, filename=filename)
@@ -310,6 +330,8 @@ def download_policy(
     db: Session = Depends(get_db),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Return the indexed Git content as a downloadable Cedar attachment."""
+
     policy = (
         db.query(models.PolicyMetadata)
         .filter_by(tenant_id=tenant_id, filename=filename)
@@ -347,6 +369,8 @@ def policy_history(
     filename: str = Depends(validate_policy_filename),
     git_service: GitStorageService = Depends(get_git_service),
 ):
+    """Return Git commits affecting an authorized tenant policy path."""
+
     try:
         history = git_service.policy_history(tenant_id, filename)
     except Exception as error:

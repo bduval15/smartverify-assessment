@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 
+/** Render file selection plus explicit upload and replacement actions. */
 export default function PolicyUpload({
   selectedFile,
   busy,

@@ -12,6 +12,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 def configured_cedar_executable() -> str | None:
+    """Resolve the real Cedar executable from the environment or local PATH."""
+
     configured = os.getenv("CEDAR_EXECUTABLE") or dotenv_values(
         BACKEND_ROOT / ".env"
     ).get("CEDAR_EXECUTABLE")

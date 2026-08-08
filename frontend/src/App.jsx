@@ -6,6 +6,7 @@ import PolicyList from './components/PolicyList.jsx'
 import PolicyUpload from './components/PolicyUpload.jsx'
 import usePolicyManager from './hooks/usePolicyManager.js'
 
+/** Compose the complete single-page policy management interface. */
 function App() {
   const manager = usePolicyManager()
 

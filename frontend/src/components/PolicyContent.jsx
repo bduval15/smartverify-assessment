@@ -1,3 +1,4 @@
+/** Render the selected policy's committed Cedar text. */
 export default function PolicyContent({ policy, onClose }) {
   if (!policy) {
     return null

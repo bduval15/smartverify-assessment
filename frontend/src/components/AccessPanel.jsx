@@ -1,3 +1,4 @@
+/** Render backend-provided demo users and their authorized tenant options. */
 export default function AccessPanel({
   users,
   userId,

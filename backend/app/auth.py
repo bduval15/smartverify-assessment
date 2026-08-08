@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 
 
 class UserAccess(TypedDict):
+    """Describe one seeded user's customer and tenant authorization scope."""
+
     customer_id: str
     tenant_ids: list[str]
 
@@ -32,6 +34,10 @@ router = APIRouter(prefix="/api/users", tags=["Demo users"])
 def get_current_user_access(
     user_id: str | None = Header(default=None),
 ) -> UserAccess:
+    """Resolve a seeded user header or reject an unknown identity."""
+
+    """Resolve a seeded user header or reject an unknown identity."""
+
     if user_id is None or user_id not in DEMO_USERS:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return DEMO_USERS[user_id]
@@ -40,11 +46,19 @@ def get_current_user_access(
 def get_authorized_tenants(
     user_access: UserAccess = Depends(get_current_user_access),
 ) -> list[str]:
+    """Return the tenant IDs that the authenticated demo user may access."""
+
+    """Return the tenant IDs that the authenticated demo user may access."""
+
     return user_access["tenant_ids"]
 
 
 @router.get("")
 def list_demo_users():
+    """Expose non-secret seeded access options for the demo user selector."""
+
+    """Expose non-secret seeded access options for the demo user selector."""
+
     # This discovery endpoint only populates the assessment's user selector.
     # Protected routes still validate every user-id and tenant independently.
     return {

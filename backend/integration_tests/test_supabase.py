@@ -11,6 +11,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
 def integration_database_url() -> str | None:
+    """Resolve the optional database URL used only by integration tests."""
+
     return (
         os.getenv("SUPABASE_TEST_DATABASE_URL")
         or dotenv_values(BACKEND_ROOT / ".env").get("DATABASE_URL")

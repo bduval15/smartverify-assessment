@@ -9,6 +9,8 @@ load_dotenv()
 
 
 def get_database_url() -> str:
+    """Return the configured PostgreSQL URL or fail fast during startup."""
+
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         raise RuntimeError("DATABASE_URL environment variable is required")
@@ -27,10 +29,14 @@ SessionLocal = sessionmaker(
 )
 
 class Base(DeclarativeBase):
+    """Provide the declarative base shared by SQLAlchemy metadata models."""
+
     pass
 
 
 def get_db():
+    """Yield one SQLAlchemy session and always close it after the request."""
+
     # One session per request prevents transaction state leaking between users.
     db = SessionLocal()
     try:

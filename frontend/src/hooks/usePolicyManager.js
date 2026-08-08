@@ -10,6 +10,7 @@ import {
 } from '../api/policies.js'
 import { getDemoUsers } from '../api/users.js'
 
+/** Trigger a browser download for a response Blob and release its object URL. */
 function downloadBlob(blob, filename) {
   // Object URLs save the real response body without navigating away; revoking
   // the URL immediately prevents the Blob from being retained in memory.
@@ -23,6 +24,7 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(downloadUrl)
 }
 
+/** Coordinate policy API operations and all state shared by the page sections. */
 export default function usePolicyManager() {
   const [users, setUsers] = useState([])
   const [userId, setUserId] = useState('')
@@ -39,6 +41,7 @@ export default function usePolicyManager() {
   const authorizedTenants =
     users.find((user) => user.user_id === userId)?.tenant_ids || []
 
+  /** Refresh the selected tenant's metadata list on demand. */
   const loadPolicies = useCallback(async () => {
     if (!userId || !tenantId) {
       return
@@ -108,6 +111,7 @@ export default function usePolicyManager() {
     }
   }, [tenantId, userId])
 
+  /** Clear tenant-specific panels and messages before changing access scope. */
   function clearSelection() {
     setSelectedContent(null)
     setSelectedHistory(null)
@@ -116,6 +120,7 @@ export default function usePolicyManager() {
     setBusy('list')
   }
 
+  /** Select a demo user and default to the first tenant they may access. */
   function changeUser(nextUserId) {
     const nextUser = users.find((user) => user.user_id === nextUserId)
     if (!nextUser) {
@@ -126,11 +131,13 @@ export default function usePolicyManager() {
     clearSelection()
   }
 
+  /** Select another tenant within the current user's authorized options. */
   function changeTenant(nextTenantId) {
     setTenantId(nextTenantId)
     clearSelection()
   }
 
+  /** Upload or strictly replace the currently selected local file. */
   async function savePolicy(method) {
     if (!selectedFile) {
       setError('Choose a Cedar file first.')
@@ -156,6 +163,7 @@ export default function usePolicyManager() {
     }
   }
 
+  /** Load committed Cedar content and close the history panel. */
   async function viewContent(filename) {
     setBusy(`content:${filename}`)
     setError('')
@@ -169,6 +177,7 @@ export default function usePolicyManager() {
     }
   }
 
+  /** Load Git history and close the content panel. */
   async function viewHistory(filename) {
     setBusy(`history:${filename}`)
     setError('')
@@ -183,6 +192,7 @@ export default function usePolicyManager() {
     }
   }
 
+  /** Download one committed policy without navigating away from the page. */
   async function downloadPolicy(filename) {
     setBusy(`download:${filename}`)
     setError('')
@@ -197,6 +207,7 @@ export default function usePolicyManager() {
     }
   }
 
+  /** Confirm and delete one policy, then refresh the metadata list. */
   async function deletePolicy(filename) {
     if (!window.confirm(`Delete ${filename}?`)) {
       return

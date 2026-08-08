@@ -1,3 +1,4 @@
+/** Render the application title and current backend health indicator. */
 export default function AppHeader({ apiOnline }) {
   return (
     <header>

@@ -11,6 +11,8 @@ from .routers import policies
 
 
 def get_cors_allowed_origins() -> list[str]:
+    """Parse the comma-separated browser origins allowed to call the API."""
+
     configured_origins = os.getenv(
         "CORS_ALLOWED_ORIGINS",
         "http://localhost:5173",
@@ -40,6 +42,8 @@ app.include_router(auth.router)
 
 @app.get("/")
 def health_check(db: Session = Depends(get_db)):
+    """Confirm that both FastAPI and its PostgreSQL connection are healthy."""
+
     # Checking the database here catches a common case where Uvicorn is running
     # but the supplied Supabase connection is unavailable.
     db.execute(text("SELECT 1"))
