@@ -50,9 +50,36 @@ npm run build
 The component tests verify backend-provided customer/tenant options, selection
 callbacks, policy rendering, action callbacks, and the empty-list state.
 
+## Manual acceptance and recording checklist
+
+The recorded demonstration provides the browser-level acceptance coverage that
+is intentionally outside the component suite:
+
+1. Start the backend and show the database-connected health response.
+2. Start the frontend and switch between the seeded users and their tenants.
+3. Upload a valid file from `demo-policies` and show it in the list.
+4. Show the Supabase metadata row and its matching Git commit hash.
+5. View and download the policy and confirm the downloaded content.
+6. Replace the same filename and show two entries in Git history.
+7. Upload invalid Cedar and show the actionable parser error.
+8. Send a handcrafted `user_1` request for `tenant_B` and show HTTP 403.
+9. Delete the policy and show that it leaves the list while Git retains the
+   deletion history.
+
+## Deliberate test boundaries
+
+- Browser automation is not included because the UI is one page and the
+  required recording demonstrates the full browser workflow.
+- Multi-process Git concurrency and process-crash recovery are documented
+  production extensions, not supported assessment behavior.
+- OAuth/session behavior is not tested because seeded header users are an
+  explicit assessment constraint.
+- The isolated suite uses SQLite for speed, while the separate rollback-only
+  integration test proves the metadata model against real PostgreSQL.
+
 ## Latest verified execution
 
-Verified on August 7, 2026:
+Verified on August 8, 2026:
 
 | Check | Result |
 | --- | --- |

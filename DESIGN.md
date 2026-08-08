@@ -1,4 +1,4 @@
-# SmartVerify Policy Manager — System Design
+# SmartVerify Policy Manager - System Design
 
 ## 1. Executive summary
 
@@ -176,13 +176,13 @@ The repository layout is intentionally direct:
 
 ```text
 policy_data_store/
-├── .git/
-├── tenant_A/
-│   └── allow-policy-view.cedar
-├── tenant_B/
-│   └── policy.cedar
-└── tenant_C/
-    └── another-policy.cedar
+|-- .git/
+|-- tenant_A/
+|   `-- allow-policy-view.cedar
+|-- tenant_B/
+|   `-- policy.cedar
+`-- tenant_C/
+    `-- another-policy.cedar
 ```
 
 Every successful upload, replacement, restoration, or deletion creates a Git
@@ -443,11 +443,11 @@ state library. It is split by responsibility:
 
 ```text
 src/
-├── api/          HTTP client, policy requests, and demo-user request
-├── components/   Access, upload, list, content, history, and header UI
-├── hooks/        Policy-manager state and actions
-├── App.jsx       Page composition only
-└── index.css     Shared simple styling
+|-- api/          HTTP client, policy requests, and demo-user request
+|-- components/   Access, upload, list, content, history, and header UI
+|-- hooks/        Policy-manager state and actions
+|-- App.jsx       Page composition only
+`-- index.css     Shared simple styling
 ```
 
 `usePolicyManager` coordinates selected user/tenant state, list refreshes,
@@ -547,7 +547,26 @@ would be appropriate if the interface grew or became release-critical.
 | Styling | Plain CSS | Component framework | No design-system dependency; fewer prebuilt advanced controls. |
 | Repository startup | Automatic initialization | Manual init script | Fewer setup steps; repository lifecycle occurs at runtime. |
 
-## 17. Known limitations and production extensions
+## 17. Implemented bonus features and production extensions
+
+### Implemented bonus features
+
+The following features go beyond the required upload/list/download/delete
+workflow while remaining small and directly related to the design:
+
+- Strict replacement of an existing policy, with another Git version.
+- Policy content preview in the browser.
+- Per-policy Git history in the UI and API.
+- Exact commit-hash reads that ignore uncommitted filesystem changes.
+- Configurable CORS for local or deployed frontend origins.
+- Path traversal prevention, UTF-8 enforcement, and a 1 MiB upload limit.
+- Compensating Git commits when a PostgreSQL replacement or deletion fails.
+- Separate real Cedar CLI and Supabase/PostgreSQL integration tests.
+
+These were chosen because they strengthen version control, tenant safety, and
+demonstrability without changing the core storage model.
+
+### Known limitations and future extensions
 
 The current implementation is complete for the assessment but intentionally
 not a production control plane. Important extensions would include:
