@@ -27,6 +27,8 @@ app = FastAPI(title="SmartVerify Policy Manager")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_cors_allowed_origins(),
+    # Authentication uses a header rather than cookies, so credentials are not
+    # needed and the allowed browser origins can remain explicit.
     allow_credentials=False,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "user-id"],
@@ -38,5 +40,7 @@ app.include_router(auth.router)
 
 @app.get("/")
 def health_check(db: Session = Depends(get_db)):
+    # Checking the database here catches a common case where Uvicorn is running
+    # but the supplied Supabase connection is unavailable.
     db.execute(text("SELECT 1"))
     return {"status": "API is online and database is connected"}

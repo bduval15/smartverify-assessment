@@ -27,6 +27,8 @@ class GitStorageService:
         try:
             self.repo = Repo(self.repo_path)
         except InvalidGitRepositoryError:
+            # Automatic initialization keeps first-run setup to one backend
+            # command while still creating a real, independent Git repository.
             self.repo = Repo.init(self.repo_path)
             with self.repo.config_writer() as config:
                 config.set_value(
@@ -42,6 +44,8 @@ class GitStorageService:
 
     @staticmethod
     def _validate_path_component(value: str, field_name: str) -> None:
+        # Tenant authorization is the primary boundary; rejecting path syntax
+        # adds defense in depth against traversal outside the repository.
         if (
             not value
             or value in {".", ".."}
@@ -71,6 +75,8 @@ class GitStorageService:
 
         relative_path = self._git_relative_path(tenant_id, filename)
         self.repo.index.add([relative_path])
+        # Committing every accepted mutation makes Git version history part of
+        # the storage model rather than treating the repository as a folder.
         commit = self.repo.index.commit(
             f"Add/Update policy {filename} for tenant {tenant_id}"
         )
@@ -87,6 +93,8 @@ class GitStorageService:
         if commit_hash is None:
             return full_file_path.read_text(encoding="utf-8")
 
+        # API reads pass the metadata hash so uncommitted filesystem changes
+        # cannot silently replace the content PostgreSQL points to.
         relative_path = self._git_relative_path(tenant_id, filename)
         try:
             commit = self.repo.commit(commit_hash)
@@ -139,6 +147,8 @@ class GitStorageService:
 
         temp_file_path = ""
         try:
+            # The official CLI accepts a policy path, so a short-lived file lets
+            # it validate uploaded text without persisting rejected content.
             with tempfile.NamedTemporaryFile(delete=False, suffix=".cedar") as temp_file:
                 temp_file.write(file_content.encode("utf-8"))
                 temp_file_path = temp_file.name
@@ -159,6 +169,8 @@ class GitStorageService:
                 parser_error = parser_error.replace(
                     temp_file_path, "uploaded policy"
                 )
+                # Preserve Cedar's actionable token/location details without
+                # exposing a local temp path or returning unbounded output.
                 raise CedarValidationError(parser_error[:4000])
         except subprocess.TimeoutExpired as error:
             raise CedarValidatorUnavailableError(

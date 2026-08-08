@@ -8,6 +8,9 @@ class UserAccess(TypedDict):
     tenant_ids: list[str]
 
 
+# Keep authorization data in the backend so the browser never becomes the
+# source of truth for tenant access. Users 1 and 2 intentionally share a
+# customer while having different tenant scopes.
 DEMO_USERS: dict[str, UserAccess] = {
     "user_1": {
         "customer_id": "customer_1",
@@ -42,6 +45,8 @@ def get_authorized_tenants(
 
 @router.get("")
 def list_demo_users():
+    # This discovery endpoint only populates the assessment's user selector.
+    # Protected routes still validate every user-id and tenant independently.
     return {
         "users": [
             {

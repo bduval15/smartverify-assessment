@@ -29,6 +29,8 @@ def test_real_postgresql_policy_metadata_round_trip():
     filename = "supabase-integration.cedar"
 
     with engine.connect() as connection:
+        # Exercise the real Supabase schema while guaranteeing the unique test
+        # row is never committed to the customer's metadata table.
         transaction = connection.begin()
         try:
             version = connection.execute(text("SELECT version()"))

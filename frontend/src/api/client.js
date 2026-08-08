@@ -38,6 +38,8 @@ export function publicApiRequest(path, options = {}) {
 }
 
 export function apiRequest(path, userId, options = {}) {
+  // The header is intentionally simple for the assessment; the backend still
+  // treats it as untrusted input and enforces the user's tenant mapping.
   return request(path, {
     ...options,
     headers: {

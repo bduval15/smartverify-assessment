@@ -11,6 +11,8 @@ import {
 import { getDemoUsers } from '../api/users.js'
 
 function downloadBlob(blob, filename) {
+  // Object URLs save the real response body without navigating away; revoking
+  // the URL immediately prevents the Blob from being retained in memory.
   const downloadUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = downloadUrl
@@ -58,6 +60,8 @@ export default function usePolicyManager() {
   }, [])
 
   useEffect(() => {
+    // Access options come from the backend to avoid duplicating security
+    // configuration in React. The server remains authoritative on every call.
     getDemoUsers()
       .then((demoUsers) => {
         setUsers(demoUsers)
@@ -77,6 +81,8 @@ export default function usePolicyManager() {
       return undefined
     }
 
+    // Ignore a slower response after the user switches tenants, preventing an
+    // old tenant's list from replacing the newly selected tenant's results.
     let active = true
 
     listPolicies(userId, tenantId)

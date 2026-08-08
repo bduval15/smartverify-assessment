@@ -14,12 +14,16 @@ from ..services import (
 )
 
 router = APIRouter(prefix="/api/policies", tags=["Policies"])
+# Policy files should remain small administrative artifacts; this also bounds
+# memory use because uploads are validated in memory before reaching Git.
 MAX_POLICY_SIZE_BYTES = 1024 * 1024
 
 def verify_tenant_access(
     tenant_id: str,
     authorized_tenants: list[str] = Depends(get_authorized_tenants),
 ) -> str:
+    # This dependency runs for every policy route, so handcrafted requests get
+    # the same tenant isolation as requests made through the UI.
     if tenant_id not in authorized_tenants:
         raise HTTPException(status_code=403, detail="Forbidden")
     return tenant_id
@@ -99,6 +103,8 @@ def upload_policy(
         raise HTTPException(status_code=409, detail="Policy already exists")
 
     try:
+        # Git must be written first because metadata cannot reference a commit
+        # that does not exist yet.
         commit_hash = git_service.write_policy(tenant_id, filename, content)
     except Exception as error:
         raise HTTPException(
@@ -117,6 +123,8 @@ def upload_policy(
     except SQLAlchemyError as error:
         db.rollback()
         try:
+            # Git and PostgreSQL cannot share a transaction. A deletion commit
+            # is the compensating action when the metadata insert fails.
             git_service.delete_policy(tenant_id, filename)
         except Exception:
             pass
@@ -143,6 +151,8 @@ def delete_policy(
         raise HTTPException(status_code=404, detail="Policy not found")
 
     try:
+        # Save the committed version before deletion so a database failure can
+        # be compensated without trusting the mutable working tree.
         previous_content = git_service.read_policy(
             tenant_id,
             filename,
@@ -169,6 +179,8 @@ def delete_policy(
     except SQLAlchemyError as error:
         db.rollback()
         try:
+            # Restoration is a new commit so the failed delete remains visible
+            # in Git history instead of rewriting repository history.
             git_service.write_policy(tenant_id, filename, previous_content)
         except Exception:
             pass
@@ -185,6 +197,8 @@ def list_policies(
     tenant_id: str = Depends(verify_tenant_access),
     db: Session = Depends(get_db),
 ):
+    # PostgreSQL is the query index; listing should not infer current policies
+    # by walking Git paths.
     policies = (
         db.query(models.PolicyMetadata)
         .filter(models.PolicyMetadata.tenant_id == tenant_id)
@@ -212,6 +226,8 @@ def update_policy(
         .first()
     )
     if not policy:
+        # PUT is strict replacement, not upsert. New policies must use POST so
+        # an accidental filename cannot silently create content.
         raise HTTPException(status_code=404, detail="Policy not found")
 
     try:
@@ -240,6 +256,8 @@ def update_policy(
     except SQLAlchemyError as error:
         db.rollback()
         try:
+            # Keep the previous content current if PostgreSQL cannot advance
+            # its git_hash to the replacement commit.
             git_service.write_policy(tenant_id, filename, previous_content)
         except Exception:
             pass
