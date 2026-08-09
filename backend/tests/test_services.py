@@ -118,6 +118,8 @@ def test_cedar_syntax_validation_accepts_valid_policy_and_removes_temp_file(
     assert observed["command"][:3] == ["cedar-test", "check-parse", "-p"]
     assert observed["temp_exists_during_call"] is True
     assert observed["kwargs"]["timeout"] == 10
+    assert observed["kwargs"]["encoding"] == "utf-8"
+    assert observed["kwargs"]["errors"] == "replace"
     assert not os.path.exists(observed["command"][-1])
 
 

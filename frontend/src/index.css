@@ -159,6 +159,9 @@ small {
 .notice.error {
   color: #991b1b;
   background: #fee2e2;
+  /* Cedar diagnostics contain source lines and pointers; preserve that layout. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .table-wrap {

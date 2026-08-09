@@ -79,7 +79,7 @@ is intentionally outside the component suite:
 
 ## Latest verified execution
 
-Verified on August 8, 2026:
+Verified on August 9, 2026:
 
 | Check | Result |
 | --- | --- |
@@ -99,6 +99,7 @@ Verified on August 8, 2026:
 | `pytest -v` could not import `app` | Added the backend directory to pytest's Python path | Plain `pytest -v` passes |
 | Browser uploads were not real files | Changed the API and UI to multipart file upload | Multipart lifecycle tests |
 | Cedar CLI failures surfaced as a Windows process error | Added configurable `CEDAR_EXECUTABLE` handling and HTTP 503 errors | Real Cedar integration and failure tests |
+| Cedar's UTF-8 parser diagnostics appeared as `Ã—` and `â”€` on Windows | Explicitly decode Cedar subprocess output as UTF-8, with safe replacement for malformed bytes | Full 66-test backend suite and subprocess encoding assertions |
 | Cedar parser details were hidden | Return the parser's token and location details in the HTTP 400 response | Parser-error API and service tests |
 | Users had tenants but no customer mapping | Added explicit customer IDs and tenant lists in the backend | Seeded-user API test |
 | Frontend duplicated authorization data | Frontend now loads demo access mappings from `GET /api/users` | React access-panel tests |

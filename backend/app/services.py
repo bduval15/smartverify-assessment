@@ -177,6 +177,11 @@ class GitStorageService:
                 [cedar_executable, "check-parse", "-p", temp_file_path],
                 capture_output=True,
                 text=True,
+                # Cedar emits UTF-8 diagnostics (including box-drawing
+                # characters). Windows otherwise decodes them with its active
+                # code page, which turns useful errors into mojibake.
+                encoding="utf-8",
+                errors="replace",
                 timeout=10,
                 check=False,
             )
