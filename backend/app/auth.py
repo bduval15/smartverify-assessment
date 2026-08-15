@@ -36,8 +36,6 @@ def get_current_user_access(
 ) -> UserAccess:
     """Resolve a seeded user header or reject an unknown identity."""
 
-    """Resolve a seeded user header or reject an unknown identity."""
-
     if user_id is None or user_id not in DEMO_USERS:
         raise HTTPException(status_code=401, detail="Unauthorized")
     return DEMO_USERS[user_id]
@@ -48,15 +46,11 @@ def get_authorized_tenants(
 ) -> list[str]:
     """Return the tenant IDs that the authenticated demo user may access."""
 
-    """Return the tenant IDs that the authenticated demo user may access."""
-
     return user_access["tenant_ids"]
 
 
 @router.get("")
 def list_demo_users():
-    """Expose non-secret seeded access options for the demo user selector."""
-
     """Expose non-secret seeded access options for the demo user selector."""
 
     # This discovery endpoint only populates the assessment's user selector.

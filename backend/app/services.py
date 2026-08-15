@@ -14,10 +14,8 @@ DEFAULT_REPOSITORY_PATH = Path(__file__).resolve().parents[2] / "policy_data_sto
 class CedarValidationError(ValueError):
     """Raised when Cedar rejects a policy's syntax."""
 
-
 class CedarValidatorUnavailableError(RuntimeError):
     """Raised when the Cedar CLI cannot be used."""
-
 
 class GitStorageService:
     """Store tenant policy content and version history in one Git repository."""
